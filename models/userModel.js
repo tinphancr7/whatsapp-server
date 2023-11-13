@@ -1,0 +1,39 @@
+import mongoose from "mongoose";
+const DOCUMENT_NAME = "User";
+const COLLECTION_NAME = "users";
+const UserSchema = new mongoose.Schema(
+	{
+		username: {
+			type: String,
+			required: true,
+			min: 3,
+			max: 20,
+			unique: true,
+		},
+		email: {
+			type: String,
+			required: true,
+			unique: true,
+			max: 50,
+		},
+		password: {
+			type: String,
+			required: true,
+			min: 8,
+		},
+		isAvatarImageSet: {
+			type: Boolean,
+			default: false,
+		},
+		avatarImage: {
+			type: String,
+			default: "",
+		},
+	},
+	{
+		collection: COLLECTION_NAME,
+		timestamps: true,
+	}
+);
+
+export default mongoose.model(DOCUMENT_NAME, UserSchema);
