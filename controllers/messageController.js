@@ -74,8 +74,7 @@ const addImageMessage = async (req, res, next) => {
 
 			renameSync(req.file.path, fileName);
 			const {from, to} = req.query;
-			console.log("from", from);
-			console.log("to", to);
+
 			const getUser = onlineUsers.get(to);
 			if (from && to) {
 				const newMessage = await messageModel.create({
@@ -100,14 +99,13 @@ const addAudioMessage = async (req, res, next) => {
 			let fileName =
 				"uploads/recordings/" + date.getTime() + req.file.originalname;
 			renameSync(req.file.path, fileName);
-			const prisma = getPrismaInstance();
 			const {from, to} = req.body;
 			const getUser = onlineUsers.get(to);
-			const newMessage = await prisma.messages.create({
+			const newMessage = await messageModel.create({
 				data: {
 					message: fileName,
-					sender: {connect: {id: parseInt(from)}},
-					reciever: {connect: {id: parseInt(to)}},
+					sender: from,
+					receiver: to,
 					messageStatus: getUser ? "delivered" : "sent",
 					type: "audio",
 				},
