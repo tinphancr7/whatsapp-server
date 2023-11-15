@@ -10,7 +10,11 @@ import dotenv from "dotenv";
 dotenv.config();
 app.use("/uploads/recordings", express.static("uploads/recordings"));
 app.use("/uploads/images", express.static("uploads/images"));
-app.use(cors());
+app.use(
+	cors({
+		origin: "*",
+	})
+);
 app.use(express.json());
 
 mongoose

@@ -98,23 +98,28 @@ const addAudioMessage = async (req, res, next) => {
 		if (req.file) {
 			const date = Date.now();
 			let fileName = "uploads/recordings/" + date + req.file.originalname;
+			console.log("fileName", fileName);
 			renameSync(req.file.path, fileName);
-			const {from, to} = req.body;
+			const {from, to} = req.query;
+			console.log("from", from);
+			console.log("to", to);
+
 			const getUser = onlineUsers.get(to);
 			const newMessage = await messageModel.create({
-				data: {
-					message: fileName,
-					sender: from,
-					receiver: to,
-					messageStatus: getUser ? "delivered" : "sent",
-					type: "audio",
-				},
+				message: fileName,
+				sender: from,
+				receiver: to,
+				messageStatus: getUser ? "delivered" : "sent",
+				type: "audio",
 			});
 			return res
 				.status(201)
 				.json({msg: "Success", status: true, message: newMessage});
 		}
-	} catch (error) {}
+	} catch (error) {
+		console.log("error", error);
+		return res.status(500).json({msg: "Failed", status: false});
+	}
 };
 
 const getInitialContactsWithMessages = async (req, res) => {
@@ -220,7 +225,7 @@ const getInitialContactsWithMessages = async (req, res) => {
 			onlineUsers: Array.from(onlineUsers.keys()),
 		});
 	} catch (error) {
-		next(error);
+		// next(error);
 	}
 };
 
