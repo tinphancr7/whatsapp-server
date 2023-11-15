@@ -8,6 +8,7 @@ const app = express();
 import {Server} from "socket.io";
 import dotenv from "dotenv";
 dotenv.config();
+app.use("/uploads/recordings", express.static("uploads/recordings"));
 app.use("/uploads/images", express.static("uploads/images"));
 app.use(cors());
 app.use(express.json());
@@ -18,7 +19,7 @@ mongoose
 		useUnifiedTopology: true,
 	})
 	.then(() => {
-		console.log("DB Connetion Successfull");
+		console.log("DB Connection Successful");
 	})
 	.catch((err) => {
 		console.log(err.message);

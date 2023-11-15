@@ -1,6 +1,7 @@
 import messageModel from "../models/messageModel.js";
 import mongoose from "mongoose";
 import {renameSync} from "fs";
+import userModel from "../models/userModel.js";
 
 const getMessages = async (req, res, next) => {
 	try {
@@ -74,8 +75,7 @@ const addImageMessage = async (req, res, next) => {
 
 			renameSync(req.file.path, fileName);
 			const {from, to} = req.query;
-			console.log("from", from);
-			console.log("to", to);
+
 			const getUser = onlineUsers.get(to);
 			if (from && to) {
 				const newMessage = await messageModel.create({
@@ -99,14 +99,13 @@ const addAudioMessage = async (req, res, next) => {
 			const date = Date.now();
 			let fileName = "uploads/recordings/" + date + req.file.originalname;
 			renameSync(req.file.path, fileName);
-			const prisma = getPrismaInstance();
 			const {from, to} = req.body;
 			const getUser = onlineUsers.get(to);
-			const newMessage = await prisma.messages.create({
+			const newMessage = await messageModel.create({
 				data: {
 					message: fileName,
-					sender: {connect: {id: parseInt(from)}},
-					reciever: {connect: {id: parseInt(to)}},
+					sender: from,
+					receiver: to,
 					messageStatus: getUser ? "delivered" : "sent",
 					type: "audio",
 				},
@@ -117,4 +116,118 @@ const addAudioMessage = async (req, res, next) => {
 		}
 	} catch (error) {}
 };
-export {getMessages, addMessage, addImageMessage, addAudioMessage};
+
+const getInitialContactsWithMessages = async (req, res) => {
+	try {
+		const userId = req.params.from;
+		const user = await userModel
+			.findByUserId(userId)
+			.populate("sender")
+			.populate("receiver");
+
+		// const user = await prisma.users.findUnique({
+		// 	where: {
+		// 		id: userId,
+		// 	},
+		// 	include: {
+		// 		sentMessages: {
+		// 			include: {
+		// 				reciever: true,
+		// 				sender: true,
+		// 			},
+		// 			orderBy: {
+		// 				createdAt: "desc",
+		// 			},
+		// 		},
+		// 		recievedMessages: {
+		// 			include: {
+		// 				reciever: true,
+		// 				sender: true,
+		// 			},
+		// 			orderBy: {
+		// 				createdAt: "desc",
+		// 			},
+		// 		},
+		// 	},
+		// });
+
+		const messages = [...user.sentMessages, ...user.recievedMess];
+		messages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+		const users = new Map();
+		const messageStatusChange = [];
+		messages.forEach((msg) => {
+			const isSender = msg.senderId === userId;
+			const calculatedId = isSender ? msg.recievedId : msg.senderId;
+			if (msg.messageStatus === "sent") {
+				messageStatusChange.push(msg.id);
+			}
+			if (!user.get(calculatedId)) {
+				const {
+					id,
+					type,
+					message,
+					messageStatus,
+					createdAt,
+					senderId,
+					recieverId,
+				} = msg;
+				let user = {
+					messageId: id,
+					type,
+					message,
+					messageStatus,
+					createdAt,
+					senderId,
+					recieverId,
+				};
+				if (isSender) {
+					user = {
+						...user,
+						...msg.reciever,
+						totalUnreadMessages: 0,
+					};
+				} else {
+					user = {
+						...user,
+						...msg.sender,
+						totalUnreadMessages: messageStatus !== "read" ? 1 : 0,
+					};
+				}
+				users.set(calculatedId, {
+					...user,
+				});
+			} else if (messageStatus !== "read" && !isSender) {
+				const user = users.get(calculatedId);
+				user.set(calculatedId, {
+					...user,
+					totalUnreadMessages: user.totalUnreadMessages + 1,
+				});
+			}
+		});
+		if (messageStatusChange.length) {
+			await prisma.messages.updateMany({
+				where: {
+					id: {in: messageStatusChange},
+				},
+				data: {
+					messageStatus: "delivered",
+				},
+			});
+		}
+
+		return res.status(200).json({
+			user: Array.from(users.values()),
+			onlineUsers: Array.from(onlineUsers.keys()),
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
+export {
+	getMessages,
+	addMessage,
+	addImageMessage,
+	addAudioMessage,
+	getInitialContactsWithMessages,
+};
