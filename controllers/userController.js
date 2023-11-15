@@ -101,4 +101,22 @@ const logOut = (req, res, next) => {
 		next(ex);
 	}
 };
+
+const generateToken = (req, res) => {
+	const appId = parseInt(process.env.ZEGO_APP_ID);
+	const serverSecret = process.env.ZEGO_APP_SECRET;
+	const userId = req.params.id;
+	const effectiveTime = 3600;
+	const payload = "";
+	if (appId && serverSecret && userId) {
+		const token = zegoExpressEngine.generateToken(
+			appId,
+			serverSecret,
+			userId,
+			effectiveTime,
+			payload
+		);
+		return res.json({token});
+	}
+};
 export {login, register, getAllUsers, setAvatar, logOut, getUserById};

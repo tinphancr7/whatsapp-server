@@ -96,9 +96,8 @@ const addImageMessage = async (req, res, next) => {
 const addAudioMessage = async (req, res, next) => {
 	try {
 		if (req.file) {
-			const date = new Date();
-			let fileName =
-				"uploads/recordings/" + date.getTime() + req.file.originalname;
+			const date = Date.now();
+			let fileName = "uploads/recordings/" + date + req.file.originalname;
 			renameSync(req.file.path, fileName);
 			const prisma = getPrismaInstance();
 			const {from, to} = req.body;

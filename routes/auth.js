@@ -12,5 +12,6 @@ router.post("/register", register);
 router.get("/get-contacts/:id", getAllUsers);
 router.post("/setavatar/:id", setAvatar);
 router.get("/logout/:id", logOut);
+router.get("/generate-token/:userId", logOut);
 
 export default router;
