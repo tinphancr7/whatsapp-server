@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import userModel from "../models/userModel.js";
 import mongoose from "mongoose";
+import generateToken04 from "../utils/TokenGenerator.js";
 
 const login = async (req, res, next) => {
 	try {
@@ -105,18 +106,26 @@ const logOut = (req, res, next) => {
 const generateToken = (req, res) => {
 	const appId = parseInt(process.env.ZEGO_APP_ID);
 	const serverSecret = process.env.ZEGO_APP_SECRET;
-	const userId = req.params.id;
+	const userId = req.params.userId;
 	const effectiveTime = 3600;
 	const payload = "";
 	if (appId && serverSecret && userId) {
-		const token = zegoExpressEngine.generateToken(
+		const token = generateToken04(
 			appId,
-			serverSecret,
 			userId,
+			serverSecret,
 			effectiveTime,
 			payload
 		);
-		return res.json({token});
+		return res.status(200).json({token});
 	}
 };
-export {login, register, getAllUsers, setAvatar, logOut, getUserById};
+export {
+	generateToken,
+	login,
+	register,
+	getAllUsers,
+	setAvatar,
+	logOut,
+	getUserById,
+};

@@ -81,15 +81,15 @@ io.on("connection", (socket) => {
 		}
 	});
 	socket.on("reject-voice-call", (data) => {
-		const sendUserSocket = onlineUsers.get(data?.to);
+		const sendUserSocket = onlineUsers.get(data?.from);
 		if (sendUserSocket) {
-			socket.to(sendUserSocket).emit("voice-call-reject");
+			socket.to(sendUserSocket).emit("voice-call-rejected");
 		}
 	});
 	socket.on("reject-video-call", (data) => {
-		const sendUserSocket = onlineUsers.get(data?.to);
+		const sendUserSocket = onlineUsers.get(data?.from);
 		if (sendUserSocket) {
-			socket.to(sendUserSocket).emit("video-call-reject");
+			socket.to(sendUserSocket).emit("video-call-rejected");
 		}
 	});
 	socket.on("accept-incoming-call", ({id}) => {

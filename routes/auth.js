@@ -1,5 +1,6 @@
 import express from "express";
 import {
+	generateToken,
 	getAllUsers,
 	logOut,
 	login,
@@ -12,6 +13,6 @@ router.post("/register", register);
 router.get("/get-contacts/:id", getAllUsers);
 router.post("/setavatar/:id", setAvatar);
 router.get("/logout/:id", logOut);
-router.get("/generate-token/:userId", logOut);
+router.get("/generate-token/:userId", generateToken);
 
 export default router;
