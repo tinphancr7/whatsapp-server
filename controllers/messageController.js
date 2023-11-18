@@ -125,70 +125,54 @@ const addAudioMessage = async (req, res, next) => {
 const getInitialContactsWithMessages = async (req, res) => {
 	try {
 		const userId = req.params.from;
-		const user = await userModel
-			.findByUserId(userId)
-			.populate("sender")
-			.populate("receiver");
-
-		// const user = await prisma.users.findUnique({
-		// 	where: {
-		// 		id: userId,
-		// 	},
-		// 	include: {
-		// 		sentMessages: {
-		// 			include: {
-		// 				reciever: true,
-		// 				sender: true,
-		// 			},
-		// 			orderBy: {
-		// 				createdAt: "desc",
-		// 			},
-		// 		},
-		// 		recievedMessages: {
-		// 			include: {
-		// 				reciever: true,
-		// 				sender: true,
-		// 			},
-		// 			orderBy: {
-		// 				createdAt: "desc",
-		// 			},
-		// 		},
-		// 	},
-		// });
-
-		const messages = [...user.sentMessages, ...user.recievedMess];
-		messages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+		const user = await userModel.aggregate([
+			{
+				$match: {
+					_id: userId,
+				},
+			},
+			{
+				$lookup: {
+					from: "messages",
+					localField: "_id",
+					foreignField: "sender",
+					as: "sentMessages",
+				},
+			},
+			{
+				$lookup: {
+					from: "messages",
+					localField: "_id",
+					foreignField: "receiver",
+					as: "receivedMessages",
+				},
+			},
+		]);
+		const messages = [...user.sentMessages, ...user.receivedMessages];
 		const users = new Map();
 		const messageStatusChange = [];
 		messages.forEach((msg) => {
-			const isSender = msg.senderId === userId;
-			const calculatedId = isSender ? msg.recievedId : msg.senderId;
+			const isSender = msg.sender.toString() === userId;
+			const calculatedId = isSender ? msg.receiver : msg.sender;
 			if (msg.messageStatus === "sent") {
 				messageStatusChange.push(msg.id);
 			}
 			if (!user.get(calculatedId)) {
-				const {
-					id,
-					type,
-					message,
-					messageStatus,
-					createdAt,
-					senderId,
-					recieverId,
-				} = msg;
+				const {_id, type, message, messageStatus, createdAt, sender, receiver} =
+					msg;
 				let user = {
-					messageId: id,
+					messageId: _id,
 					type,
 					message,
 					messageStatus,
 					createdAt,
-					senderId,
-					recieverId,
+					sender,
+					receiver,
 				};
 				if (isSender) {
 					user = {
 						...user,
-						...msg.reciever,
+						...msg.receiver,
 						totalUnreadMessages: 0,
 					};
 				} else {
