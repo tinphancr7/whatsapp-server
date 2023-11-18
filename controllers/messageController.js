@@ -22,11 +22,13 @@ const getMessages = async (req, res, next) => {
 			messages.forEach(async (message, index) => {
 				if (
 					message.messageStatus !== "read" &&
-					message.sender === mongoose.Types.ObjectId(to)
+					message.sender.toString() === to
 				) {
+					// console.log("message", message);
 					messages[index].messageStatus = "read";
+					console.log("message", message._id);
 
-					unreadMessages.push(message.id);
+					unreadMessages.push(message._id);
 				}
 
 				await messageModel.updateMany(
@@ -98,11 +100,9 @@ const addAudioMessage = async (req, res, next) => {
 		if (req.file) {
 			const date = Date.now();
 			let fileName = "uploads/recordings/" + date + req.file.originalname;
-			console.log("fileName", fileName);
+
 			renameSync(req.file.path, fileName);
 			const {from, to} = req.query;
-			console.log("from", from);
-			console.log("to", to);
 
 			const getUser = onlineUsers.get(to);
 			const newMessage = await messageModel.create({
@@ -161,8 +161,8 @@ const getInitialContactsWithMessages = async (req, res) => {
 		const users = new Map();
 		const messageStatusChange = [];
 		messages.forEach((msg) => {
-			const isSender = msg.senderId === userId;
-			const calculatedId = isSender ? msg.recievedId : msg.senderId;
+			const isSender = msg.sender === userId;
+			const calculatedId = isSender ? msg.recieved : msg.sender;
 			if (msg.messageStatus === "sent") {
 				messageStatusChange.push(msg.id);
 			}

@@ -8,13 +8,14 @@ const app = express();
 import {Server} from "socket.io";
 import dotenv from "dotenv";
 dotenv.config();
-app.use("/uploads/recordings", express.static("uploads/recordings"));
-app.use("/uploads/images", express.static("uploads/images"));
 app.use(
 	cors({
 		origin: "*",
 	})
 );
+app.use("/uploads/recordings", express.static("uploads/recordings"));
+app.use("/uploads/images", express.static("uploads/images"));
+
 app.use(express.json());
 
 mongoose
@@ -53,6 +54,7 @@ io.on("connection", (socket) => {
 		const sendUserSocket = onlineUsers.get(data?.to);
 
 		if (sendUserSocket) {
+			console.log("sendUserSocket", sendUserSocket);
 			socket.to(sendUserSocket).emit("msg-receive", {
 				message: data?.message,
 				from: data?.from,
