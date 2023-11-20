@@ -24,9 +24,7 @@ const getMessages = async (req, res, next) => {
 					message.messageStatus !== "read" &&
 					message.sender.toString() === to
 				) {
-					// console.log("message", message);
 					messages[index].messageStatus = "read";
-					console.log("message", message._id);
 
 					unreadMessages.push(message._id);
 				}
@@ -125,70 +123,79 @@ const addAudioMessage = async (req, res, next) => {
 const getInitialContactsWithMessages = async (req, res) => {
 	try {
 		const userId = req.params.from;
-		const user = await userModel
-			.findByUserId(userId)
-			.populate("sender")
-			.populate("receiver");
+		const messages = await messageModel.aggregate([
+			{
+				$match: {
+					$or: [
+						{
+							sender: mongoose.Types.ObjectId(userId),
+						},
+						{
+							receiver: mongoose.Types.ObjectId(userId),
+						},
+					],
+				},
+			},
+			{
+				$lookup: {
+					from: "users",
+					localField: "sender",
+					foreignField: "_id",
+					as: "sender",
+				},
+			},
+			{
+				$lookup: {
+					from: "users",
+					localField: "receiver",
+					foreignField: "_id",
+					as: "receiver",
+				},
+			},
+			{
+				$unwind: {
+					path: "$sender",
+				},
+			},
+			{
+				$unwind: {
+					path: "$receiver",
+				},
+			},
+			{
+				$sort: {
+					createdAt: -1,
+				},
+			},
+		]);
 
-		// const user = await prisma.users.findUnique({
-		// 	where: {
-		// 		id: userId,
-		// 	},
-		// 	include: {
-		// 		sentMessages: {
-		// 			include: {
-		// 				reciever: true,
-		// 				sender: true,
-		// 			},
-		// 			orderBy: {
-		// 				createdAt: "desc",
-		// 			},
-		// 		},
-		// 		recievedMessages: {
-		// 			include: {
-		// 				reciever: true,
-		// 				sender: true,
-		// 			},
-		// 			orderBy: {
-		// 				createdAt: "desc",
-		// 			},
-		// 		},
-		// 	},
-		// });
-
-		const messages = [...user.sentMessages, ...user.recievedMess];
-		messages.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 		const users = new Map();
 		const messageStatusChange = [];
 		messages.forEach((msg) => {
-			const isSender = msg.sender === userId;
-			const calculatedId = isSender ? msg.recieved : msg.sender;
+			const isSender = msg.sender?._id.toString() === userId;
+
+			const calculatedId = isSender ? msg.receiver?._id : msg.sender?._id;
+
 			if (msg.messageStatus === "sent") {
-				messageStatusChange.push(msg.id);
+				messageStatusChange.push(msg._id);
 			}
-			if (!user.get(calculatedId)) {
-				const {
-					id,
-					type,
-					message,
-					messageStatus,
-					createdAt,
-					senderId,
-					recieverId,
-				} = msg;
+			const {_id, type, message, messageStatus, createdAt, sender, receiver} =
+				msg;
+
+			if (!users.get(calculatedId.toString())) {
 				let user = {
-					messageId: id,
+					messageId: _id,
 					type,
 					message,
 					messageStatus,
 					createdAt,
-					senderId,
-					recieverId,
+					sender,
+					receiver,
 				};
 				if (isSender) {
 					user = {
 						...user,
-						...msg.reciever,
+						...msg.receiver,
 						totalUnreadMessages: 0,
 					};
 				} else {
@@ -198,30 +205,32 @@ const getInitialContactsWithMessages = async (req, res) => {
 						totalUnreadMessages: messageStatus !== "read" ? 1 : 0,
 					};
 				}
-				users.set(calculatedId, {
+				users.set(calculatedId.toString(), {
 					...user,
 				});
 			} else if (messageStatus !== "read" && !isSender) {
-				const user = users.get(calculatedId);
-				user.set(calculatedId, {
+				const user = users.get(calculatedId.toString());
+				users.set(calculatedId.toString(), {
 					...user,
 					totalUnreadMessages: user.totalUnreadMessages + 1,
 				});
 			}
 		});
 		if (messageStatusChange.length) {
-			await prisma.messages.updateMany({
-				where: {
-					id: {in: messageStatusChange},
+			await messageModel.updateMany(
+				{
+					_id: {
+						$in: messageStatusChange,
+					},
 				},
-				data: {
+				{
 					messageStatus: "delivered",
-				},
-			});
+				}
+			);
 		}
 
 		return res.status(200).json({
-			user: Array.from(users.values()),
+			users: Array.from(users.values()),
 			onlineUsers: Array.from(onlineUsers.keys()),
 		});
 	} catch (error) {

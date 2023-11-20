@@ -50,14 +50,20 @@ io.on("connection", (socket) => {
 	socket.on("add-user", (userId) => {
 		onlineUsers.set(userId, socket.id);
 	});
+	// send all active users to new user
+	socket.emit("online-users", Array.from(onlineUsers.keys()));
 	socket.on("send-msg", (data) => {
 		const sendUserSocket = onlineUsers.get(data?.to);
 
 		if (sendUserSocket) {
-			console.log("sendUserSocket", sendUserSocket);
 			socket.to(sendUserSocket).emit("msg-receive", {
 				message: data?.message,
 				from: data?.from,
+			});
+			console.log("Message Sent");
+			socket.to(sendUserSocket).emit("get-notification", {
+				sender: data?.from,
+				isRead: false,
 			});
 		}
 	});
