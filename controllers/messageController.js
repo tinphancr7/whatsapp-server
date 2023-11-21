@@ -123,6 +123,7 @@ const addAudioMessage = async (req, res, next) => {
 const getInitialContactsWithMessages = async (req, res) => {
 	try {
 		const userId = req.params.from;
+
 		const messages = await messageModel.aggregate([
 			{
 				$match: {

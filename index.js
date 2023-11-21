@@ -56,11 +56,16 @@ io.on("connection", (socket) => {
 		const sendUserSocket = onlineUsers.get(data?.to);
 
 		if (sendUserSocket) {
+			console.log("sendUserSocket", sendUserSocket);
 			socket.to(sendUserSocket).emit("msg-receive", {
 				message: data?.message,
 				from: data?.from,
 			});
-			console.log("Message Sent");
+			io.emit("msg-noti", {
+				message: data?.message,
+				from: data?.from,
+			});
+
 			socket.to(sendUserSocket).emit("get-notification", {
 				sender: data?.from,
 				isRead: false,
