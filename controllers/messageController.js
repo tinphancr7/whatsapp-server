@@ -1,7 +1,6 @@
 import messageModel from "../models/messageModel.js";
 import mongoose from "mongoose";
 import {renameSync} from "fs";
-import userModel from "../models/userModel.js";
 
 const getMessages = async (req, res, next) => {
 	try {
@@ -123,6 +122,7 @@ const addAudioMessage = async (req, res, next) => {
 const getInitialContactsWithMessages = async (req, res) => {
 	try {
 		const userId = req.params.from;
+		console.log("userId", userId);
 
 		const messages = await messageModel.aggregate([
 			{
